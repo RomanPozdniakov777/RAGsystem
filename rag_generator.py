@@ -1,14 +1,22 @@
 import logging
+import torch
+from transformers import pipeline
+
+logging.basicConfig(
+    filename = 'rag_debug.log',
+    level = logging.INFO,
+    format = '%(asctime)s - %(levelname)s - %(message)s',
+    encoding = 'utf-8',
+)
 
 class Generator:
-    def __init__(self, model_name = ''):
+    def __init__(self, model_name = 'IlyaGusev/siberia7b_gradio'):
         '''
 
         :param model_name:
         '''
         self.model_name = model_name
-        self.model = None
-        self.tokenizer = None
+        self.generator = None
         logging.info(f'Generator инициализирован с моделью: {model_name}')
 
     def initialize_generator(self):
@@ -17,7 +25,12 @@ class Generator:
         :return:
         '''
         try:
-            logging.warning('Заглушка: модель пока не загружена')
+            self.generator = pipeline(
+                "text-generation",
+                model=self.model_name,
+                torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                device_map="auto"
+            )
 
             logging.info('Генеративная модель инициализирована успешно')
 
@@ -50,7 +63,15 @@ class Generator:
                     Ответ:
                     """
 
-            answer = f"Заглушка: ответ на '{query}' будет сгенерирован на основе {len(relevant_chunks)} чанков"
+            answer = self.model(
+                prompt,
+                max_new_tokens=300,
+                temperature=0.7,
+                top_p=0.9,
+                repetition_penalty=1.1
+            )
+
+            answer = answer.strip()
 
             logging.info('Ответ сгенерирован успешно')
 

@@ -1,6 +1,13 @@
 import logging
 from rag_setup import EmbeddingManager
 
+logging.basicConfig(
+    filename = 'rag_debug.log',
+    level = logging.INFO,
+    format = '%(asctime)s - %(levelname)s - %(message)s',
+    encoding = 'utf-8',
+)
+
 class Retriever:
     def __init__(self, vector_db = None):
         '''
