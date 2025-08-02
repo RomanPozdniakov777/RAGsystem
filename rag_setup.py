@@ -166,12 +166,13 @@ class VectorDB:
         '''
         logging.info(f'Инициализация ChromaDB в папке: {self.persist_directory}')
 
-        settings = Settings(
-            chroma_db_impl = "duckdb+parquet",
-            persist_directory = self.persist_directory,
-        )
-
-        self.client = chromadb.Client(settings)
+        # settings = Settings(
+        #     chroma_db_impl = "duckdb+parquet",
+        #     persist_directory = self.persist_directory,
+        # )
+        #
+        # self.client = chromadb.Client(settings)
+        self.client = chromadb.PersistentClient(path = self.persist_directory)
         self.collection = self.client.get_or_create_collection(name = 'documents')
 
         logging.info('ChromaDB успешно инициализирована')
