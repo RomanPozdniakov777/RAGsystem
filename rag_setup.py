@@ -51,7 +51,7 @@ class DocumentProcessor:
 
         for filename in os.listdir(self.folder):
             if filename.endswith('.pdf'):
-                path = os.path.join(path, filename)
+                path = os.path.join(self.folder, filename)
                 text = self.load_pdf_document(path)
 
                 documents.append({
@@ -149,7 +149,7 @@ class EmbeddingManager:
         return embeddings
 
 class VectorDB:
-    def __init__(self, persist_directory = './chroma_db'):
+    def __init__(self, persist_directory = 'chroma_db'):
         '''
 
         :param persist_directory:
@@ -166,6 +166,7 @@ class VectorDB:
         '''
         logging.info(f'Инициализация ChromaDB в папке: {self.persist_directory}')
 
+        os.makedirs(self.persist_directory, exist_ok=True)
         # settings = Settings(
         #     chroma_db_impl = "duckdb+parquet",
         #     persist_directory = self.persist_directory,

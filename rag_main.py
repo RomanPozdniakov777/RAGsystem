@@ -6,10 +6,10 @@ from rag_generator import Generator
 from rag_setup import VectorDB
 
 logging.basicConfig(
-    filename='rag_main.log',
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    encoding='utf-8'
+    filename = 'rag_main.log',
+    level = logging.INFO,
+    format = '%(asctime)s - %(levelname)s - %(message)s',
+    encoding = 'utf-8'
 )
 
 def setup_rag_system():

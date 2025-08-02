@@ -10,7 +10,7 @@ logging.basicConfig(
 )
 
 class Generator:
-    def __init__(self, model_name = 'IlyaGusev/siberia7b_gradio'):
+    def __init__(self, model_name = "ai-forever/FRED-T5-large"):
         '''
 
         :param model_name:
@@ -26,10 +26,11 @@ class Generator:
         '''
         try:
             self.generator = pipeline(
-                "text-generation",
-                model=self.model_name,
-                torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                device_map="auto"
+                 "text2text-generation",
+                model = self.model_name,
+                torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32,
+                device_map="auto" if torch.cuda.is_available() else None,
+                trust_remote_code = True
             )
 
             logging.info('Генеративная модель инициализирована успешно')
@@ -44,34 +45,37 @@ class Generator:
         :param relevant_chunks:
         :return:
         '''
-        if self.model is None:
+        if self.generator is None:
             raise ValueError('Генеративная модель не инициализирована')
 
         logging.info(f'Генерация ответа для запроса: {query}')
         try:
             context = "\n".join(relevant_chunks)
 
-            prompt = f"""
-                    Используй следующую информацию для ответа на вопрос.
-                    Если информации недостаточно, скажи об этом честно.
+            # prompt = f"""
+            #         Используй следующую информацию для ответа на вопрос.
+            #         Если информации недостаточно, скажи об этом честно.
+            #
+            #         Контекст:
+            #         {context}
+            #
+            #         Вопрос: {query}
+            #
+            #         Ответ:
+            #         """
 
-                    Контекст:
-                    {context}
+            prompt = f"Ответь на вопрос '{query}', используя информацию: {context[:1000]}"
 
-                    Вопрос: {query}
-
-                    Ответ:
-                    """
-
-            answer = self.model(
+            response = self.generator(
                 prompt,
-                max_new_tokens=300,
-                temperature=0.7,
-                top_p=0.9,
-                repetition_penalty=1.1
+                max_new_tokens = 150,
+                # temperature = 0.7,
+                # top_p = 0.9,
+                repetition_penalty = 1.2,
+                do_sample = True
             )
 
-            answer = answer.strip()
+            answer = response[0]['generated_text']
 
             logging.info('Ответ сгенерирован успешно')
 

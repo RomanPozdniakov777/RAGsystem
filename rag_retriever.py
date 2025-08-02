@@ -42,7 +42,7 @@ class Retriever:
             query_embedding = self.embedding_manager.create_embeddings_for_chunks([query])
 
             results = self.vector_db.collection.query(
-                query_emeddings = [query_embedding[0].to_list()],
+                query_embeddings = [query_embedding[0].tolist()],
                 n_results = n_results
             )
 
