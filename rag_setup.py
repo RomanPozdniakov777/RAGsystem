@@ -1,6 +1,5 @@
 import logging
 import os
-
 import chromadb
 from PyPDF2 import PdfReader, PdfFileReader
 from chromadb import Settings
@@ -134,7 +133,7 @@ class EmbeddingManager:
 
         logging.info('Модель успешно загружена')
 
-    def create_embedding_for_chunks(self, chunks):
+    def create_embeddings_for_chunks(self, chunks):
         '''
 
         :param chunks:
@@ -203,3 +202,56 @@ class VectorDB:
             ids = ids
         )
         logging.info(f'Успешно сохранено {len(chunks)} чанков')
+
+
+class RAGOrchestrator:
+    def __init__(self):
+        '''
+
+        '''
+        self.document_processor = DocumentProcessor()
+        self.text_chunker = TextChunker()
+        self.embedding_manager = EmbeddingManager()
+        self.vector_db = VectorDB()
+
+        logging.info('Инициализация RAGOrchestrator')
+
+    def setup_rag_system(self):
+        '''
+
+        :return:
+        '''
+        logging.info('Начало полной настройки RAG системы')
+
+        try:
+            self.embedding_manager.initialize_model()
+            self.vector_db.initialize_client()
+            documents = self.document_processor.load_all_documents()
+            for document in documents:
+                self._process_single_document(document)
+            logging.info('Полная настройка RAG системы завершена успешно')
+        except Exception as e:
+            logging.error(f'Ошибка при настройке RAG системы: {str(e)}')
+            raise
+
+    def _process_single_document(self, document):
+        '''
+
+        :param document:
+        :return:
+        '''
+        source = document['source']
+        text = document['text']
+        logging.info(f'Обработка документа: {source}')
+        try:
+            chunks = self.text_chunker.split_text_into_chunks(text)
+
+            embeddings = self.embedding_manager.create_embeddings_for_chunks(chunks)
+
+            self.vector_db.save_chunks(chunks, embeddings, source)
+
+            logging.info(f'Документ {source} обработан успешно')
+
+        except Exception as e:
+            logging.error(f'Ошибка при обработке документа {source}: {str(e)}')
+            raise
