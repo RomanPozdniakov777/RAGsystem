@@ -2,6 +2,7 @@ import logging
 import torch
 from transformers import pipeline
 
+# Настройка логирования для отслеживания работы генератора
 logging.basicConfig(
     filename = 'rag_debug.log',
     level = logging.INFO,
@@ -9,17 +10,15 @@ logging.basicConfig(
     encoding = 'utf-8',
 )
 
-fgfgfg = "ai-forever/FRED-T5-large"
-fgf = "CausalNLP/gpt2-hf_multilingual-70"
-rtr = "ai-forever/rugpt3medium_based_on_gpt2"
-asd = 'google/mt5-small'
-dgfh = 'cointegrated/rut5-base-multitask'
-
 class Generator:
+    """Класс для генерации ответов на вопросы пользователя на основе найденного контекста."""
     def __init__(self, model_name = "Qwen/Qwen3-0.6B"):
         '''
+        Инициализирует генератор с указанной моделью.
 
-        :param model_name:
+        Args:
+            model_name (str): Идентификатор модели на Hugging Face.
+                              По умолчанию используется Qwen/Qwen3-0.6B.
         '''
         self.model_name = model_name
         self.generator = None
@@ -27,16 +26,19 @@ class Generator:
 
     def initialize_generator(self):
         '''
-
-        :return:
+        Загружает и инициализирует генеративную модель через transformers.pipeline.
+        Модель загружается в автоматически определяемое устройство (GPU/CPU).
         '''
         try:
+            # Создание пайплайна для генерации текста
             self.generator = pipeline(
-               #"text2text-generation",
-                "text-generation",
-                model = self.model_name,
+                "text-generation", # Тип задачи: генерация текста
+                model = self.model_name, # Имя модели
+                # Используем float16 для GPU (экономия памяти), float32 для CPU
                 torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32,
+                # Автоматический выбор устройства (GPU если доступен)
                 device_map="auto" if torch.cuda.is_available() else None,
+                # Необходимо для моделей с пользовательским кодом
                 trust_remote_code = True
             )
 
@@ -48,65 +50,56 @@ class Generator:
 
     def generate_answer(self, query, relevant_chunks):
         '''
-        :param query:
-        :param relevant_chunks:
-        :return:
+        Генерирует ответ на вопрос пользователя, используя найденный контекст.
+
+        Args:
+            query (str): Вопрос пользователя.
+            relevant_chunks (list): Список релевантных текстовых фрагментов из БД.
+
+        Returns:
+            str: Сгенерированный ответ на русском языке.
+
+        Raises:
+            ValueError: Если модель не была инициализирована.
+            Exception: При ошибке генерации.
         '''
+        # Проверка, что модель инициализирована
         if self.generator is None:
             raise ValueError('Генеративная модель не инициализирована')
 
         logging.info(f'Генерация ответа для запроса: {query}')
         try:
+            # Объединяем найденные релевантные фрагменты в один контекст
             context = "\n".join(relevant_chunks)
 
-            # prompt = f"""
-            #         Используй следующую информацию для ответа на вопрос.
-            #         Если информации недостаточно, скажи об этом честно.
-            #
-            #         Контекст:
-            #         {context}
-            #
-            #         Вопрос: {query}
-            #
-            #         Ответ:
-            #         """
-
-            # prompt = f"Ответь на русском языке на вопрос '{query}', используя следующую информацию:\n{context}\n\nОтвет на русском языке:"
+            # Формируем промпт для модели
+            # Модель будет использовать этот текст как основу для генерации ответа
             prompt = f"Вопрос: {query}\nКонтекст: {context}\nОтвет на русском языке:"
 
+            # Генерация ответа с заданными параметрами
             response = self.generator(
-                prompt,
-                max_new_tokens = 150,
-                temperature = 0.7,
-                top_p = 0.9,
-                repetition_penalty = 1.2,
-                do_sample = True
+                prompt, # Входной текст (промпт)
+                max_new_tokens = 150, # Максимальное количество генерируемых токенов
+                temperature = 0.7, # Контроль креативности (0 - детерминировано, 1+ - креативно)
+                top_p = 0.9, # Nucleus sampling - ограничивает выбор токенов по вероятности
+                repetition_penalty = 1.2, # Штраф за повторение токенов
+                do_sample = True # Использовать сэмплинг вместо жадного поиска
             )
 
-            # answer = response[0]['generated_text'].strip()
-
+            # Извлекаем только сгенерированную часть ответа
+            # Убираем исходный промпт из результата
             full_text = response[0]['generated_text']
             answer = full_text[len(prompt):].strip()
 
+            # Резервный вариант, если извлечение по длине не сработало
             if not answer:
                 answer = full_text.strip()
 
             logging.info('Ответ сгенерирован успешно')
 
+            # Возвращаем только сгенерированный ответ, без контекста
             return answer
 
         except Exception as e:
             logging.error(f'Ошибка при генерации ответа: {str(e)}')
             raise
-    # def generate_answer(self, query, relevant_chunks):
-    #     '''
-    #
-    #     '''
-    #     if not relevant_chunks:
-    #         return "Извините, не найдено релевантной информации."
-    #
-    #     answer = "Найденная информация:\n\n"
-    #     for i, chunk in enumerate(relevant_chunks[:2]):
-    #         answer += f"{i + 1}. {chunk.strip()}\n\n"
-
-    #       return answer
